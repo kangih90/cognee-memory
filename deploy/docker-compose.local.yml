@@ -1,0 +1,37 @@
+# Local test on this Mac: no caddy, the vault is bind-mounted, MCP on localhost:8000.
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build \
+#     postgres neo4j cognee-mcp obsidian-sync rclone
+
+services:
+  cognee-mcp:
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  obsidian-sync:
+    volumes: !override
+      - cognee-storage:/cognee-storage
+      - ../obs-tt:/vault:ro
+      - ../sync_obsidian.py:/app/sync/sync_obsidian.py:ro
+    depends_on: !override
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      cognee-mcp:
+        condition: service_started
+
+  # Pulls the vault's Drive backup into ../obs-tt, the vault itself. obs-tt is the
+  # original and Google Drive backs it up, so this must never delete or overwrite:
+  # "copy --update" only adds notes that are new or newer on Drive. ("sync" would
+  # delete notes not yet backed up, and the Drive app would then delete them on Drive.)
+  rclone:
+    volumes: !override
+      - ./rclone:/config/rclone
+      - ../obs-tt:/vault
+    command: !override
+      - |
+        while true; do
+          rclone copy gdrive: /vault --update --exclude ".obsidian/**" --exclude ".trash/**" \
+            || echo "drive copy failed, retrying next round"
+          sleep "$$SYNC_INTERVAL"
+        done

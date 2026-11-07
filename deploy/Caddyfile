@@ -1,0 +1,13 @@
+# HTTPS (Let's Encrypt, automatic) + bearer token in front of cognee-mcp.
+# {$VAR} is replaced from the container environment when Caddy starts.
+{$MCP_DOMAIN} {
+	@unauthorized not header Authorization "Bearer {$MCP_TOKEN}"
+	respond @unauthorized 401
+
+	reverse_proxy cognee-mcp:8000 {
+		# cognee-mcp only accepts localhost Host headers (DNS rebinding guard).
+		header_up Host localhost:8000
+		# Pass streamed MCP responses through immediately.
+		flush_interval -1
+	}
+}

@@ -1,0 +1,164 @@
+# Cognee MCP over HTTPS with an Obsidian vault synced from Google Drive.
+#
+#   internet --HTTPS+token--> caddy --> cognee-mcp ──────────┐
+#   Google Drive --> rclone --> /vault --> obsidian-sync ────┤--> postgres (relational + pgvector + session cache)
+#                                                            └--> neo4j    (graph)
+#
+# Every cognee database is a server, so cognee-mcp and obsidian-sync can run at the
+# same time (the default file databases lock each other out).
+#
+# Layout expected on the host (the build context is the parent folder):
+#   ./cognee-mcp/        cognee-mcp source, with its Dockerfile
+#   ./sync_obsidian.py   vault sync script
+#   ./.dockerignore      keeps .env, data and .venv out of the image
+#   ./deploy/            this folder
+#
+# Setup: see README.md in this folder.
+
+x-cognee-env: &cognee-env
+  # Databases: all servers, none file-based.
+  DB_PROVIDER: postgres
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_NAME: cognee
+  DB_USERNAME: cognee
+  DB_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+  VECTOR_DB_PROVIDER: pgvector
+  VECTOR_DB_HOST: postgres
+  VECTOR_DB_PORT: "5432"
+  VECTOR_DB_USERNAME: cognee
+  VECTOR_DB_PASSWORD: ${POSTGRES_PASSWORD}
+  GRAPH_DATABASE_PROVIDER: neo4j
+  GRAPH_DATABASE_URL: bolt://neo4j:7687
+  GRAPH_DATABASE_USERNAME: neo4j
+  GRAPH_DATABASE_PASSWORD: ${NEO4J_PASSWORD:?set NEO4J_PASSWORD in deploy/.env}
+  CACHE_BACKEND: postgres
+  # Neo4j Community has a single database, while access control gives every dataset
+  # its own one (Enterprise/AuraDB only). Off = all datasets share one graph: fine for
+  # a single user, but there is no per-user/per-dataset storage isolation.
+  ENABLE_BACKEND_ACCESS_CONTROL: "false"
+  # Raw files, pipeline locks and model downloads, shared by both cognee containers.
+  DATA_ROOT_DIRECTORY: /cognee-storage/data
+  SYSTEM_ROOT_DIRECTORY: /cognee-storage/system
+  HF_HOME: /cognee-storage/hf
+
+x-cognee-depends: &cognee-depends
+  postgres:
+    condition: service_healthy
+  neo4j:
+    condition: service_healthy
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cognee
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: cognee
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cognee -d cognee"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  neo4j:
+    image: neo4j:5-community
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
+      NEO4J_PLUGINS: '["apoc"]'  # cognee's Neo4j adapter calls APOC procedures
+    volumes:
+      - neo4j-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p \"$${NEO4J_AUTH#neo4j/}\" 'RETURN 1' >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  cognee-mcp:
+    build:
+      context: ..
+      dockerfile: cognee-mcp/Dockerfile
+    image: cognee-mcp-local
+    restart: unless-stopped
+    env_file: cognee.env
+    environment:
+      <<: *cognee-env
+      TRANSPORT_MODE: http
+      HTTP_PORT: "8000"
+    command: ["--path", "/mcp"]
+    volumes:
+      - cognee-storage:/cognee-storage
+    # No published port: only caddy reaches it, over the compose network.
+    expose:
+      - "8000"
+    depends_on: *cognee-depends
+
+  obsidian-sync:
+    image: cognee-mcp-local  # the image built for cognee-mcp, with a different command
+    restart: unless-stopped
+    env_file: cognee.env
+    environment:
+      <<: *cognee-env
+      OBSIDIAN_VAULT_PATH: /vault
+      OBSIDIAN_SYNC_LOCK_PATH: /tmp/obsidian_sync.lock
+      SYNC_INTERVAL: ${OBSIDIAN_SYNC_INTERVAL:-1800}
+    volumes:
+      - cognee-storage:/cognee-storage
+      - vault:/vault:ro
+      - ../sync_obsidian.py:/app/sync/sync_obsidian.py:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          python /app/sync/sync_obsidian.py || echo "obsidian sync failed, retrying next round"
+          sleep "$$SYNC_INTERVAL"
+        done
+    depends_on:
+      <<: *cognee-depends
+      cognee-mcp:
+        condition: service_started  # makes sure the image is built first
+
+  rclone:
+    image: rclone/rclone:1.69
+    restart: unless-stopped
+    environment:
+      SYNC_INTERVAL: ${DRIVE_SYNC_INTERVAL:-600}
+      DRIVE_VAULT_PATH: ${DRIVE_VAULT_PATH:-}
+    volumes:
+      - ./rclone:/config/rclone  # rclone.conf with the "gdrive" remote (see README)
+      - vault:/vault
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          rclone sync "gdrive:$$DRIVE_VAULT_PATH" /vault --exclude ".trash/**" --create-empty-src-dirs \
+            || echo "drive sync failed, retrying next round"
+          sleep "$$SYNC_INTERVAL"
+        done
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      MCP_DOMAIN: ${MCP_DOMAIN:?set MCP_DOMAIN in deploy/.env}
+      MCP_TOKEN: ${MCP_TOKEN:?set MCP_TOKEN in deploy/.env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on:
+      - cognee-mcp
+
+volumes:
+  postgres-data:
+  neo4j-data:
+  cognee-storage:
+  vault:
+  caddy-data:

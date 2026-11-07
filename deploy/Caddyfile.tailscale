@@ -1,0 +1,17 @@
+# Behind "tailscale serve": Tailscale terminates HTTPS (*.ts.net cert) and forwards
+# plain HTTP to 127.0.0.1:18080. Caddy only checks the bearer token here.
+{
+	auto_https off
+}
+
+:18080 {
+	@unauthorized not header Authorization "Bearer {$MCP_TOKEN}"
+	respond @unauthorized 401
+
+	reverse_proxy cognee-mcp:8000 {
+		# cognee-mcp only accepts localhost Host headers (DNS rebinding guard).
+		header_up Host localhost:8000
+		# Pass streamed MCP responses through immediately.
+		flush_interval -1
+	}
+}

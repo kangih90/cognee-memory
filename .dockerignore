@@ -1,0 +1,6 @@
+# Build context for deploy/docker-compose.yml is this folder. Send only cognee-mcp,
+# never .env (API keys), the vault, cognee data or local virtualenvs.
+*
+!cognee-mcp
+cognee-mcp/.venv
+cognee-mcp/**/__pycache__
