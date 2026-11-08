@@ -1,0 +1,35 @@
+# Standalone addition to the running deploy stack. Never loads deploy/.env.
+# docker-compose --env-file /dev/null -p cognee-rest -f docker-compose.rest.yml up -d
+services:
+  cognee-api:
+    image: cognee-mcp-local
+    restart: unless-stopped
+    env_file:
+      - path: ./secrets/cognee-api.runtime
+        format: raw
+    entrypoint: ["/app/.venv/bin/python", "-m", "uvicorn"]
+    command: ["cognee.api.client:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log"]
+    ports:
+      - "127.0.0.1:18081:8000"
+    volumes:
+      - cognee-storage:/cognee-storage
+      - ./secrets:/run/cognee-secrets
+    networks:
+      - existing
+    stop_grace_period: 60s
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 4
+
+volumes:
+  cognee-storage:
+    external: true
+    name: deploy_cognee-storage
+
+networks:
+  existing:
+    external: true
+    name: deploy_default

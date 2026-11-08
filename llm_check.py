@@ -1,5 +1,10 @@
 import asyncio
-import cognee  # loads .env from cwd
+import os
+from pathlib import Path
+
+os.environ.setdefault("COGNEE_ENV_FILE", str(Path(__file__).resolve().parent / ".env"))
+
+import cognee  # noqa: E402
 from cognee.infrastructure.llm.LLMGateway import LLMGateway
 
 async def main():

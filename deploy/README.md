@@ -1,5 +1,8 @@
 # cognee MCP 서버 배포 (HTTPS + 옵시디언 볼트)
 
+공식 REST와 Hermes 연결은 [별도 안내](../docs/rest-hermes.md)를 참고하세요.
+기본 Compose 프로젝트 이름은 `deploy`, 설치 경로는 `~/cognee`를 전제로 합니다.
+
 | 컨테이너 | 역할 |
 |---|---|
 | `caddy` | HTTPS 인증서 자동 발급, `Authorization: Bearer <MCP_TOKEN>` 검사 |

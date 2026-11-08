@@ -4,3 +4,6 @@
 !cognee-mcp
 cognee-mcp/.venv
 cognee-mcp/**/__pycache__
+cognee-mcp/**/.env
+cognee-mcp/**/.env.*
+cognee-mcp/**/secrets

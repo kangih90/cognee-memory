@@ -100,6 +100,8 @@ services:
 
   obsidian-sync:
     image: cognee-mcp-local  # the image built for cognee-mcp, with a different command
+    healthcheck:
+      disable: true  # the inherited MCP HTTP probe does not apply to a sync worker
     restart: unless-stopped
     env_file: cognee.env
     environment:

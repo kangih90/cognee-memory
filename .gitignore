@@ -1,8 +1,18 @@
 # Secrets: API keys, MCP token, DB passwords, Google Drive token
 .env
-deploy/.env
-deploy/cognee.env
+.env.*
+*.env
+!.env.example
+!**/.env.example
 deploy/rclone/
+deploy/secrets/
+backups/
+*.log
+*.runtime
+deploy/*validation*.json
+deploy/rest-openapi.json
+deploy/rest-validation-state.json
+deploy/rest-validation-report.json
 
 # Personal notes (the Obsidian vault)
 obs-tt/
