@@ -12,6 +12,7 @@ flowchart LR
   Client[MCP client] --> Caddy[Caddy: Bearer auth] --> MCP[Cognee MCP]
   Sync --> DB[(Postgres + pgvector / Neo4j)]
   REST --> DB
+  Browser[Browser / Tailscale] --> UI[Official Cognee UI] --> REST
   MCP --> DB
 ```
 
@@ -43,11 +44,13 @@ bash scripts/fetch-cognee-mcp.sh
 1. [Docker + Drive + MCP](deploy/README.md)로 기본 서비스를 시작합니다.
 2. [공식 REST + Hermes](docs/rest-hermes.md)로 같은 기억 저장소에 REST를 추가합니다.
 3. 필요하면 통합 회상·출처 패치를 적용하고 새 Hermes 세션에서 검증합니다.
+4. [Tailscale 전용 웹 UI](docs/private-ui.md)를 추가할 수 있습니다.
 
 | 용도 | 기본 주소 / 데이터셋 |
 |---|---|
 | MCP (Tailscale 구성) | `http://127.0.0.1:18080/mcp`, Bearer 인증 |
 | 공식 REST | `http://127.0.0.1:18081`, X-Api-Key 인증 |
+| 웹 UI | `https://home-mini.geep-pompano.ts.net:8443`, Tailscale + 로그인 |
 | Hermes 저장 | `hermes_default_memory` |
 | Obsidian 저장 | `obsidian` |
 | 기본 통합 회상 | 인증된 사용자가 읽을 수 있는 데이터셋 |

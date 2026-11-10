@@ -2,12 +2,16 @@
 
 - [Docker·Google Drive·MCP 배포](../deploy/README.md)
 - [공식 REST와 Hermes 설정](rest-hermes.md)
+- [Tailscale 전용 웹 UI](private-ui.md)
 
 ## 스크립트
 
 | 파일 | 역할 |
 |---|---|
 | `scripts/fetch-cognee-mcp.sh` | 고정된 공식 MCP 소스 다운로드 |
+| `scripts/fetch-cognee-ui.py` | 같은 커밋의 공식 UI 다운로드 및 원격 접속·로그아웃 보정 |
+| `scripts/bootstrap-ui-identity.py` | UI 전용 계정 생성, 기존 데이터셋 접근 권한 부여 |
+| `scripts/verify-ui.py` | HTTPS 쿠키 인증·업로드·검색·UI 로그아웃 및 기존 연결 검증 |
 | `scripts/prepare-rest.py` | 기존 DB·볼륨 백업 후 REST runtime 생성. 기존 컨테이너 잠시 정지·재개 |
 | `scripts/bootstrap-rest-identity.py` | API 컨테이너에서 전용 사용자·키·데이터셋 최초 생성 |
 | `scripts/hermes-secret-helper.py` | Hermes의 captured pipe에 키 공급. 단독 표시 거부, `--check` 제공 |

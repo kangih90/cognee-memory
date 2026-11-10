@@ -1,0 +1,20 @@
+{
+	auto_https off
+}
+:18082 {
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+	}
+	@backend path /api/v1 /api/v1/* /health
+	handle @backend {
+		reverse_proxy cognee-api:8000 {
+			# The existing loopback API also serves HTTP clients. Add Secure only
+			# on this HTTPS browser route, without changing those clients.
+			header_down Set-Cookie "^(auth_token=.*)$" "$1; Secure"
+		}
+	}
+	handle {
+		reverse_proxy frontend:3000
+	}
+}

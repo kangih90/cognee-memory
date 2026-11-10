@@ -25,6 +25,7 @@ logs/
 
 # Upstream source, fetched by scripts/fetch-cognee-mcp.sh
 cognee-mcp/
+cognee-ui/
 
 # Python / OS
 __pycache__/

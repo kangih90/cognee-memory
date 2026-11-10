@@ -1,0 +1,28 @@
+# Independent UI project; shares only the existing private Docker network.
+# docker compose --env-file /dev/null -p cognee-ui -f docker-compose.ui.yml up -d --build
+services:
+  frontend:
+    build:
+      context: ../cognee-ui
+      args:
+        NEXT_PUBLIC_LOCAL_API_URL: https://home-mini.geep-pompano.ts.net:8443
+    image: cognee-ui-local:dcb8d7c
+    restart: unless-stopped
+    environment:
+      COGNEE_BACKEND_URL: https://home-mini.geep-pompano.ts.net:8443
+      COGNEE_SERVER_BACKEND_URL: http://cognee-api:8000
+      NEXT_TELEMETRY_DISABLED: "1"
+    networks: [existing]
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18082:18082"
+    volumes:
+      - ./Caddyfile.ui:/etc/caddy/Caddyfile:ro
+    networks: [existing]
+    depends_on: [frontend]
+networks:
+  existing:
+    external: true
+    name: deploy_default

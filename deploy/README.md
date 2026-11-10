@@ -1,6 +1,7 @@
 # cognee MCP 서버 배포 (HTTPS + 옵시디언 볼트)
 
 공식 REST와 Hermes 연결은 [별도 안내](../docs/rest-hermes.md)를 참고하세요.
+Tailscale에서 사용하는 웹 UI는 [UI 설치 안내](../docs/private-ui.md)를 참고하세요.
 기본 Compose 프로젝트 이름은 `deploy`, 설치 경로는 `~/cognee`를 전제로 합니다.
 
 | 컨테이너 | 역할 |
