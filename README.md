@@ -58,6 +58,9 @@ bash scripts/fetch-cognee-mcp.sh
 REST API 키와 MCP_TOKEN은 별개입니다. 공개 GitHub 저장소는 서비스의 공개
 인터넷 노출을 뜻하지 않습니다. REST 포트는 호스트 loopback에만 연결합니다.
 
+ChatGPT·Claude의 OAuth 연결은 [MCP OAuth 로그인](docs/mcp-oauth.md)을 따릅니다.
+공개 MCP 주소에 OAuth를 추가하되 기존 고정 Bearer 토큰 연결도 유지합니다.
+
 ## 파일
 
 ```text

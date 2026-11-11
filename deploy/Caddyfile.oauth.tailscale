@@ -1,0 +1,9 @@
+# Tailscale Serve / Cloudflare Tunnel terminate TLS before this loopback port.
+{
+	auto_https off
+}
+:18080 {
+	reverse_proxy cognee-oauth:8000 {
+		flush_interval -1
+	}
+}

@@ -1,0 +1,5 @@
+{$MCP_DOMAIN} {
+	reverse_proxy cognee-oauth:8000 {
+		flush_interval -1
+	}
+}

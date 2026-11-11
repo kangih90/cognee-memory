@@ -1,0 +1,7 @@
+# Layer after docker-compose.yml + docker-compose.tailscale.yml.
+# The OAuth sidecar runs in the cognee-oauth project on deploy_default.
+services:
+  caddy:
+    volumes: !override
+      - ./Caddyfile.oauth.tailscale:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data

@@ -12,6 +12,9 @@
 			# The existing loopback API also serves HTTP clients. Add Secure only
 			# on this HTTPS browser route, without changing those clients.
 			header_down Set-Cookie "^(auth_token=.*)$" "$1; Secure"
+			# TLS terminates at Tailscale Serve. The backend sees HTTP and
+			# generates HTTP slash redirects; keep this UI origin on HTTPS.
+			header_down Location "^http://home-mini[.]geep-pompano[.]ts[.]net:8443(/.*)$" "https://home-mini.geep-pompano.ts.net:8443$1"
 		}
 	}
 	handle {

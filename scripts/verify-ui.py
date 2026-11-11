@@ -53,6 +53,13 @@ def main():
     status, rows = request("/api/v1/datasets")
     assert status == 200 and isinstance(rows, list)
     record("cookie_login_secure_httponly_and_datasets", len(rows))
+    # The browser requests the trailing-slash route. Its canonical redirect
+    # must stay on HTTPS after TLS terminates at Tailscale Serve.
+    with client.open(BASE + "/api/v1/datasets/", timeout=60) as response:
+        assert response.geturl() == BASE + "/api/v1/datasets"
+        assert response.status == 200
+        assert json.loads(response.read()) == rows
+    record("datasets_slash_redirect_stays_https", "passed")
     for route in ("/", "/search", "/datasets"):
         assert request(route)[0] == 200
     record("app_routes", "passed")

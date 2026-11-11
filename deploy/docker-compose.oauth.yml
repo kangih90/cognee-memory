@@ -1,0 +1,48 @@
+# Start before switching Caddy to Caddyfile.oauth[.tailscale].
+# Reuses the installed SDK image; never mounts Cognee data or login credentials.
+services:
+  oauth-state-init:
+    image: cognee-mcp-local
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["chown 1000:1000 /state && chmod 700 /state"]
+    volumes: ["oauth-state:/state"]
+    network_mode: none
+    healthcheck:
+      disable: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER]
+  cognee-oauth:
+    image: cognee-mcp-local
+    restart: unless-stopped
+    entrypoint: ["/app/.venv/bin/python", "-m", "uvicorn"]
+    command: ["gateway:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log"]
+    environment:
+      PYTHONPATH: /app/oauth
+      MCP_TOKEN: ${MCP_TOKEN:?existing MCP_TOKEN required}
+      MCP_OAUTH_ISSUER: ${MCP_OAUTH_ISSUER:-https://cognee.wegle.com}
+      MCP_OAUTH_OWNER_EMAIL: ${MCP_OAUTH_OWNER_EMAIL:-ui@example.com}
+      MCP_OAUTH_DB: /state/oauth.sqlite3
+    volumes:
+      - ../mcp-oauth:/app/oauth:ro
+      - oauth-state:/state
+    networks: [existing]
+    depends_on:
+      oauth-state-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/.well-known/oauth-authorization-server', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+
+volumes:
+  oauth-state:
+networks:
+  existing:
+    external: true
+    name: deploy_default
